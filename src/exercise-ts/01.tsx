@@ -4,7 +4,7 @@
 import * as React from 'react'
 import {dequal} from 'dequal'
 
-// ./context/user-context.js
+//#region ./context/user-context.js
 
 import * as userClient from '../user-client'
 import {useAuth} from '../auth-context'
@@ -65,7 +65,10 @@ function userReducer(state: State, action: Action): State {
   }
 }
 
-type UserContextType = readonly [state: State, dispatch: React.Dispatch<Action>]
+type UserContextType = readonly [
+  userState: State,
+  userDispatch: React.Dispatch<Action>,
+]
 const UserContext = React.createContext<UserContextType>(undefined!)
 UserContext.displayName = 'UserContext'
 
@@ -93,11 +96,27 @@ function useUser(): UserContextType {
 // 🐨 add a function here called `updateUser`
 // Then go down to the `handleSubmit` from `UserSettings` and put that logic in
 // this function. It should accept: dispatch, user, and updates
+async function updateUser(
+  dispatch: React.Dispatch<Action>,
+  user: User,
+  updates: User,
+): Promise<User> {
+  dispatch({type: 'start update', updates})
+  try {
+    const updatedUser = await userClient.updateUser(user, updates)
+    dispatch({type: 'finish update', updatedUser})
+    return updatedUser
+  } catch (error) {
+    dispatch({type: 'fail update', error})
+    throw error
+  }
+}
+export {UserProvider, useUser, updateUser}
+//#endregion ./context/user-context.js
 
-// export {UserProvider, useUser}
-
-// src/screens/user-profile.js
+//#region src/screens/user-profile.js
 // import {UserProvider, useUser} from './context/user-context'
+
 function UserSettings(): JSX.Element {
   const [{user, status, error}, userDispatch] = useUser()
 
@@ -116,12 +135,7 @@ function UserSettings(): JSX.Element {
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>): void {
     event.preventDefault()
-    // 🐨 move the following logic to the `updateUser` function you create above
-    userDispatch({type: 'start update', updates: formState})
-    userClient.updateUser(user, formState).then(
-      updatedUser => userDispatch({type: 'finish update', updatedUser}),
-      error => userDispatch({type: 'fail update', error}),
-    )
+    updateUser(userDispatch, user, formState)
   }
 
   return (
@@ -218,3 +232,4 @@ function App(): JSX.Element {
 }
 
 export default App
+//#endregion
